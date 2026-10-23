@@ -1,0 +1,411 @@
+@import "tailwindcss";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  overflow-x: clip;
+}
+
+body {
+  overflow-wrap: anywhere;
+}
+
+html,
+body,
+button,
+input,
+textarea,
+select,
+option,
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-space-grotesk), sans-serif;
+}
+
+.container-z {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: clamp(0.75rem, 4vw, 3rem);
+}
+
+:root {
+  --background: var(--primary-color);
+  --foreground: #171717;
+}
+
+:root {
+  --primary-color: #F6F3EE;
+  --secondary-color: #e5ddd2;
+
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --font-sans: var(--font-space-grotesk);
+  --font-mono: var(--font-space-grotesk);
+  --font-space: var(--font-space-grotesk);
+
+
+  --color-secondary: var(--secondary-color);
+  --color-offwhite: var(--primary-color);
+
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+
+}
+
+/* ==========================================================
+   Link tooltip: smooth, themeable
+   <a href="/cart" data-tooltip="View your bag">â€¦</a>
+
+   data-tooltip-position="top" | "bottom"          (default: bottom)
+   data-tooltip-align="start" | "center" | "end"   (default: center)
+   ========================================================== */
+
+  
+a[data-tooltip] {
+  /* Theme */
+  --tt-bg: #171717;
+  --tt-fg: #ffffff;
+
+  /* Motion */
+  --tt-gap: 10px;
+  --tt-shift: 6px;
+  --tt-delay: 120ms;
+  --tt-dur: 260ms;
+  --tt-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Horizontal alignment (set by data-tooltip-align) */
+  --tt-anchor: 50%;
+  --tt-x: -50%;
+  --tt-origin-x: 50%;
+  --tt-arrow: 50%;
+
+  /* Vertical offset and scale, animated on hover/focus */
+  --tt-from: calc(var(--tt-shift) * -1);
+  --tt-y: var(--tt-from);
+  --tt-s: 0.96;
+
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Shared base for bubble and arrow */
+a[data-tooltip]::after,
+a[data-tooltip]::before {
+  position: absolute;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  backface-visibility: hidden;
+  transition:
+    opacity var(--tt-dur) var(--tt-ease),
+    transform var(--tt-dur) var(--tt-ease),
+    visibility 0s linear var(--tt-dur);
+}
+
+/* Bubble */
+a[data-tooltip]::after {
+  content: attr(data-tooltip);
+  left: var(--tt-anchor);
+  top: calc(100% + var(--tt-gap));
+
+  width: max-content;
+  max-width: min(240px, calc(100vw - 24px));
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--tt-bg);
+  color: var(--tt-fg);
+
+  font: 500 12px/1.45 var(--font-space-grotesk), sans-serif;
+  letter-spacing: 0.01em;
+  text-align: center;
+  white-space: normal;
+  -webkit-font-smoothing: antialiased;
+  box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.45), 0 2px 6px rgb(0 0 0 / 0.12);
+
+  transform-origin: var(--tt-origin-x) 0;
+  transform: translate3d(var(--tt-x), var(--tt-y), 0) scale(var(--tt-s));
+}
+
+/* Arrow (same color, rotated square) */
+a[data-tooltip]::before {
+  content: "";
+  left: var(--tt-arrow);
+  top: calc(100% + var(--tt-gap) - 4px);
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--tt-bg);
+  transform: translate3d(-50%, var(--tt-y), 0) rotate(45deg) scale(var(--tt-s));
+}
+
+/* Visible state: hover or keyboard focus */
+a[data-tooltip]:is(:hover, :focus-visible) {
+  --tt-y: 0px;
+  --tt-s: 1;
+}
+
+a[data-tooltip]:is(:hover, :focus-visible)::after,
+a[data-tooltip]:is(:hover, :focus-visible)::before {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--tt-dur) var(--tt-ease),
+    transform var(--tt-dur) var(--tt-ease),
+    visibility 0s;
+}
+
+/* Hover waits briefly (intent delay). Keyboard focus shows immediately. */
+a[data-tooltip]:hover::after,
+a[data-tooltip]:hover::before {
+  transition-delay: var(--tt-delay);
+}
+
+/* Placement: top */
+a[data-tooltip][data-tooltip-position="top"] {
+  --tt-from: var(--tt-shift);
+}
+
+a[data-tooltip][data-tooltip-position="top"]::after {
+  top: auto;
+  bottom: calc(100% + var(--tt-gap));
+  transform-origin: var(--tt-origin-x) 100%;
+}
+
+a[data-tooltip][data-tooltip-position="top"]::before {
+  top: auto;
+  bottom: calc(100% + var(--tt-gap) - 4px);
+}
+
+/* Alignment: start (bubble extends right from the link's left edge) */
+a[data-tooltip][data-tooltip-align="start"] {
+  --tt-anchor: 0%;
+  --tt-x: 0%;
+  --tt-origin-x: 0%;
+  --tt-arrow: 12px;
+}
+
+/* Alignment: end (bubble extends left from the link's right edge) */
+a[data-tooltip][data-tooltip-align="end"] {
+  --tt-anchor: 100%;
+  --tt-x: -100%;
+  --tt-origin-x: 100%;
+  --tt-arrow: calc(100% - 12px);
+}
+
+/* Touch devices: no hover, so don't let a tap leave the tooltip stuck open */
+@media (hover: none) {
+  a[data-tooltip]:hover::after,
+  a[data-tooltip]:hover::before {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* Reduced motion: keep the fade, remove movement and scale */
+@media (prefers-reduced-motion: reduce) {
+  a[data-tooltip] {
+    --tt-y: 0px !important;
+    --tt-s: 1 !important;
+    --tt-delay: 0ms !important;
+  }
+
+  a[data-tooltip]::after,
+  a[data-tooltip]::before {
+    transition: opacity 150ms linear, visibility 0s !important;
+  }
+}
+
+/* Site-wide dark theme */
+html.dark {
+  color-scheme: dark;
+  --background: #000000;
+  --foreground: #f4f0e8;
+  --primary-color: #000000;
+  --secondary-color: #090909;
+}
+
+html.dark body {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+html.dark [class~="bg-white"],
+html.dark [class*="bg-white/"] {
+  background-color: #000000 !important;
+}
+
+html.dark [class*="bg-[#"],
+html.dark [class~="bg-offwhite"] {
+  background-color: #000000 !important;
+}
+
+html.dark [class~="bg-secondary"] {
+  background-color: #000000 !important;
+}
+
+html.dark [class~="bg-black"] {
+  background-color: #111111 !important;
+}
+
+html.dark [class~="bg-black/5"],
+html.dark [class~="bg-black/10"],
+html.dark [class*="bg-black/["] {
+  background-color: rgb(255 255 255 / 0.08) !important;
+}
+
+html.dark [class~="hover:bg-black/5"]:hover {
+  background-color: rgb(255 255 255 / 0.08) !important;
+}
+
+html.dark [class~="text-black"] {
+  color: #f4f0e8 !important;
+}
+
+html.dark [class*="text-black/"] {
+  color: rgb(244 240 232 / 0.7) !important;
+}
+
+html.dark [class~="text-black/40"] {
+  color: rgb(244 240 232 / 0.48) !important;
+}
+
+html.dark [class~="text-black/50"] {
+  color: rgb(244 240 232 / 0.58) !important;
+}
+
+html.dark [class~="text-black/55"] {
+  color: rgb(244 240 232 / 0.64) !important;
+}
+
+html.dark [class~="text-black/70"] {
+  color: rgb(244 240 232 / 0.78) !important;
+}
+
+html.dark [class~="text-[#111]"],
+html.dark [class~="text-[#383530]"],
+html.dark [class~="text-[#65615c]"] {
+  color: #e4dfd6 !important;
+}
+
+html.dark [class*="border-black/"],
+html.dark [class*="border-[#"] {
+  border-color: rgb(255 255 255 / 0.16) !important;
+}
+
+html.dark [class*="divide-black/"] > * {
+  border-color: rgb(255 255 255 / 0.14) !important;
+}
+
+html.dark [class~="accent-black"] {
+  accent-color: #e4dfd6 !important;
+}
+/* Dark theme colors for feedback, validation, and native form controls */
+html.dark input,
+html.dark textarea,
+html.dark select {
+  color: var(--foreground);
+  color-scheme: dark;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: rgb(244 240 232 / 0.5);
+}
+
+html.dark option {
+  color: var(--foreground);
+  background-color: #000000;
+}
+
+html.dark [class~="bg-red-50"] {
+  background-color: #3b2020 !important;
+}
+
+html.dark [class~="text-red-800"] {
+  color: #fecaca !important;
+}
+
+html.dark [class~="text-red-700"] {
+  color: #fca5a5 !important;
+}
+
+html.dark [class~="text-red-600"] {
+  color: #f87171 !important;
+}
+
+html.dark [class~="border-red-200"] {
+  border-color: rgb(248 113 113 / 0.4) !important;
+}
+
+html.dark [class~="bg-emerald-50"],
+html.dark [class~="bg-emerald-100"] {
+  background-color: #173326 !important;
+}
+
+html.dark [class~="text-emerald-900"],
+html.dark [class~="text-emerald-800"],
+html.dark [class~="text-emerald-700"],
+html.dark [class~="text-green-800"] {
+  color: #86efac !important;
+}
+
+html.dark [class~="bg-amber-100"] {
+  background-color: #3a2d17 !important;
+}
+
+html.dark [class~="text-amber-900"],
+html.dark [class~="text-amber-700"] {
+  color: #fcd34d !important;
+}
+
+/* Keep the home hero gradient aligned with the selected theme. */
+html.dark [class*="from-[#f6f3ed]"] {
+  background-image: linear-gradient(to right, rgb(0 0 0 / 0.75), rgb(0 0 0 / 0.15), transparent) !important;
+}
+
+html.dark svg[fill="#b91c1c"] {
+  fill: #fb7185 !important;
+  color: #fb7185 !important;
+}
+html.dark [class~="border-black"] {
+  border-color: rgb(255 255 255 / 0.2) !important;
+}
+
+html.dark [class~="focus:border-black"]:focus {
+  border-color: #e4dfd6 !important;
+}
+
+html.dark [class~="hover:text-black"]:hover {
+  color: #f4f0e8 !important;
+}
+
+html.dark [class~="hover:text-red-700"]:hover {
+  color: #fca5a5 !important;
+}
+
+html.dark [class*="ring-black/"] {
+  --tw-ring-color: rgb(255 255 255 / 0.18) !important;
+}
+
+/* Product images fit consistently inside card frames. */
+.product-card-image {
+  object-fit: contain;
+  object-position: center;
+  padding: clamp(0.45rem, 4%, 1.1rem);
+}
