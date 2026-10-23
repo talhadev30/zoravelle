@@ -16,7 +16,14 @@ export async function GET() {
       StoreSettings.findById("store").lean(),
     ]);
     return Response.json({
-      orders: orders.map((order) => ({ ...order, id: order.orderNo, _id: undefined })),
+      orders: orders.map((order) => ({
+        ...order,
+        id: order.orderNo,
+        user_action: ["pending", "confirmed", "canceled"].includes(order.user_action)
+          ? order.user_action
+          : "pending",
+        _id: undefined,
+      })),
       customers: customers.map((user) => ({ id: String(user._id), name: user.name, email: user.email, role: user.role, createdAt: user.createdAt })),
       settings: settings || { storeName: "Zoravelle", announcement: "", contactEmail: "", phone: "", freeShippingThreshold: 150, shopMaxPrice: 200 },
     });
@@ -29,6 +36,9 @@ export async function PATCH(request) {
     await connectDB();
     const body = await request.json();
     if (body.type === "order") {
+      if (Object.hasOwn(body, "user_action")) {
+        return Response.json({ error: "User action is read-only." }, { status: 400 });
+      }
       const allowed = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
       if (!allowed.includes(body.status)) return Response.json({ error: "Invalid order status." }, { status: 400 });
       const session = await mongoose.startSession();

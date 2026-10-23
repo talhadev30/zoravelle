@@ -8,7 +8,28 @@ import ProductImageUpload from "@/components/admin/ProductImageUpload";
 import ProductTryOnImageUpload from "@/components/admin/ProductTryOnImageUpload";
 import FeedbackAdminPanel from "@/components/admin/FeedbackAdminPanel";
 
+const userActionStyles = {
+  pending: "border-amber-200 bg-amber-100 text-amber-900",
+  confirmed: "border-emerald-200 bg-emerald-100 text-emerald-900",
+  canceled: "border-red-200 bg-red-100 text-red-900",
+};
 const statuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+function UserActionBadge({ value }) {
+  const action = ["pending", "confirmed", "canceled"].includes(value)
+    ? value
+    : "pending";
+  return (
+    <span
+      aria-label={"User action: " + action}
+      className={
+        "rounded-full border px-3 py-1 text-xs font-medium capitalize " +
+        userActionStyles[action]
+      }
+    >
+      {action}
+    </span>
+  );
+}
 const blankProduct = {
   name: "",
   category: "Eyeglasses",
@@ -45,6 +66,9 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [orderSearch, setOrderSearch] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+  const [orderActionFilter, setOrderActionFilter] = useState("all");
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -66,6 +90,39 @@ export default function AdminDashboard() {
     const timer = window.setTimeout(load, 0);
     return () => window.clearTimeout(timer);
   }, [load]);
+  const normalizedOrderSearch = orderSearch.trim().toLowerCase();
+  const filteredOrders = (Array.isArray(data.orders) ? data.orders : []).filter(
+    (order) => {
+      const rawAction = String(order.user_action || "").toLowerCase();
+      const action = ["pending", "confirmed", "canceled"].includes(rawAction)
+        ? rawAction
+        : "pending";
+      const searchableValues = [
+        order.orderNo,
+        order.customerName,
+        order.email,
+        order.phone,
+        ...(Array.isArray(order.items)
+          ? order.items.flatMap((item) => [item.name, item.productId])
+          : []),
+      ];
+      const matchesSearch =
+        !normalizedOrderSearch ||
+        searchableValues.some((value) =>
+          String(value ?? "").toLowerCase().includes(normalizedOrderSearch),
+        );
+      const matchesStatus =
+        orderStatusFilter === "all" || order.status === orderStatusFilter;
+      const matchesAction =
+        orderActionFilter === "all" || action === orderActionFilter;
+      return matchesSearch && matchesStatus && matchesAction;
+    },
+  );
+  function clearOrderFilters() {
+    setOrderSearch("");
+    setOrderStatusFilter("all");
+    setOrderActionFilter("all");
+  }
   async function saveProduct(event) {
     event.preventDefault();
     if (imageUploading) {
@@ -341,10 +398,78 @@ export default function AdminDashboard() {
       )}
       {tab === "orders" && (
         <section className="mt-5 grid gap-3">
+          {!loading && (
+            <div className="rounded-2xl border border-black/10 bg-white/70 p-4 shadow-sm">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold">Find orders</h2>
+                  <p className="mt-1 text-xs text-black/55">
+                    Showing {filteredOrders.length} of {data.orders.length} orders
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearOrderFilters}
+                  disabled={
+                    !orderSearch &&
+                    orderStatusFilter === "all" &&
+                    orderActionFilter === "all"
+                  }
+                  className="rounded-full border border-black/15 px-3 py-2 text-sm transition hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Clear filters
+                </button>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <label className="text-xs text-black/60">
+                  Search orders
+                  <input
+                    type="search"
+                    value={orderSearch}
+                    onChange={(event) => setOrderSearch(event.target.value)}
+                    placeholder="Order, customer, product ID..."
+                    className={field}
+                  />
+                </label>
+                <label className="text-xs text-black/60">
+                  Order status
+                  <select
+                    value={orderStatusFilter}
+                    onChange={(event) => setOrderStatusFilter(event.target.value)}
+                    className={field}
+                  >
+                    <option value="all">All statuses</option>
+                    {statuses.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs text-black/60">
+                  User action
+                  <select
+                    value={orderActionFilter}
+                    onChange={(event) => setOrderActionFilter(event.target.value)}
+                    className={field}
+                  >
+                    <option value="all">All actions</option>
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="canceled">Canceled</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          )}
           {loading ? (
             <AdminRowsSkeleton />
-          ) : data.orders.length ? (
-            data.orders.map((order) => (
+          ) : !data.orders.length ? (
+            <p className="rounded-2xl bg-white/60 p-8 text-center text-sm text-black/55">
+              No customer orders yet.
+            </p>
+          ) : filteredOrders.length ? (
+            filteredOrders.map((order) => (
               <article
                 key={order.orderNo}
                 className="grid gap-3 rounded-2xl border border-black/10 bg-white/60 p-4 sm:grid-cols-[1fr_auto] sm:items-center"
@@ -355,6 +480,8 @@ export default function AdminDashboard() {
                     <span className="rounded-full bg-black/5 px-3 py-1 text-xs">
                       {order.paymentMethod}
                     </span>
+                    <span className="text-xs text-black/50">User action</span>
+                    <UserActionBadge value={order.user_action} />
                   </div>
                   <p className="mt-1 text-sm">
                     {order.customerName} | {order.email} | {order.phone}
@@ -377,6 +504,16 @@ export default function AdminDashboard() {
                       .join(", ")}{" "}
                     | Total {formatCurrency(order.total)}
                   </p>
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-black/45">
+                    {order.items.map((item, index) => (
+                      <span key={index}>
+                        {item.name}:{" "}
+                        <code className="font-mono text-black/60">
+                          {item.productId || "Missing"}
+                        </code>
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 <label className="text-xs text-black/55">
                   Status
@@ -395,9 +532,18 @@ export default function AdminDashboard() {
               </article>
             ))
           ) : (
-            <p className="rounded-2xl bg-white/60 p-8 text-center text-sm text-black/55">
-              No customer orders yet.
-            </p>
+            <div className="rounded-2xl bg-white/60 p-8 text-center">
+              <p className="text-sm text-black/55">
+                No orders match these filters.
+              </p>
+              <button
+                type="button"
+                onClick={clearOrderFilters}
+                className="mt-3 rounded-full border border-black/15 px-3 py-2 text-sm transition hover:bg-black/5"
+              >
+                Clear filters
+              </button>
+            </div>
           )}
         </section>
       )}

@@ -183,6 +183,7 @@ export async function POST(request) {
             total: subtotal - discount + shipping,
             paymentMethod: "Cash on delivery",
             status: "Pending",
+            user_action: "pending",
           }],
           { session },
         );
