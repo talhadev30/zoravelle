@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Space_Grotesk } from "next/font/google";
 import Script from "next/script";
 import Footer from "@/components/ui/Footer";
@@ -16,6 +17,40 @@ const themeInitializationScript =
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000";
 const cleanSiteUrl = siteUrl.replace(/\/+$/, "");
+
+async function OrganizationJsonLd() {
+  const settings = await getStoreSettings();
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: settings?.storeName || "Zoravelle",
+    url: cleanSiteUrl,
+    logo: `${cleanSiteUrl}/images/favicon.svg`,
+    description:
+      "Zoravelle offers considered eyeglasses, sunglasses, blue-light blocking frames, and kids' eyewear in Pakistan.",
+    ...(settings?.contactEmail || settings?.phone
+      ? {
+          contactPoint: {
+            "@type": "ContactPoint",
+            contactType: "customer service",
+            ...(settings.contactEmail ? { email: settings.contactEmail } : {}),
+            ...(settings.phone ? { telephone: settings.phone } : {}),
+            areaServed: "PK",
+            availableLanguage: ["en", "ur"],
+          },
+        }
+      : {}),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(organizationSchema).replace(/</g, "\\u003c"),
+      }}
+    />
+  );
+}
 
 export const metadata = {
   metadataBase: new URL(cleanSiteUrl),
@@ -66,40 +101,13 @@ export const metadata = {
   },
 };
 
-export default async function RootLayout({ children }) {
-  const settings = await getStoreSettings();
-
-  const organizationSchema = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    name: settings?.storeName || "Zoravelle",
-    url: cleanSiteUrl,
-    logo: `${cleanSiteUrl}/images/favicon.svg`,
-    description:
-      "Zoravelle offers considered eyeglasses, sunglasses, blue-light blocking frames, and kids' eyewear in Pakistan.",
-    ...(settings?.contactEmail || settings?.phone
-      ? {
-          contactPoint: {
-            "@type": "ContactPoint",
-            contactType: "customer service",
-            ...(settings.contactEmail ? { email: settings.contactEmail } : {}),
-            ...(settings.phone ? { telephone: settings.phone } : {}),
-            areaServed: "PK",
-            availableLanguage: ["en", "ur"],
-          },
-        }
-      : {}),
-  };
-
+export default function RootLayout({ children }) {
   return (
     <html lang="en-PK" className={spaceGrotesk.variable} suppressHydrationWarning>
-      <body className="flex min-h-full flex-col bg-offwhite font-space" suppressHydrationWarning>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(organizationSchema).replace(/</g, "\\u003c"),
-          }}
-        />
+      <body className="flex min-h-screen flex-col bg-offwhite font-space" suppressHydrationWarning>
+        <Suspense fallback={null}>
+          <OrganizationJsonLd />
+        </Suspense>
         <Navbar />
         <div className="grow flex-1">{children}</div>
         <Footer />

@@ -1,6 +1,6 @@
 🕶️ Zoravelle
 
-Zoravelle is a responsive, high-performance e-commerce storefront for eyewear built with Next.js 16, MongoDB, and Mongoose. It features clean component modularity, real-time inventory management, custom AI image enhancement/virtual try-on capabilities, and automated transaction emails via Resend.
+Zoravelle is a responsive, high-performance e-commerce storefront for eyewear built with Next.js 16, MongoDB, and Mongoose. It features clean component modularity, real-time inventory management, custom AI image enhancement/virtual try-on capabilities, and Web3Forms-powered contact submissions.
 
 📸 Overview & Features
 
@@ -10,7 +10,7 @@ Dynamic Product Catalog: Browse products with filterable dynamic categories, sto
 
 Account Management: Order tracking, purchase history, profile details, and account feedback.
 
-Seamless Checkout: Streamlined Cash-on-Delivery (COD) checkout process with automated transaction emails.
+Seamless Checkout: Streamlined Cash-on-Delivery (COD) checkout process with order tracking.
 
 Interactive Features: Virtual try-on module, image uploads, dynamic announcements, and promotional newsletter subscription.
 
@@ -40,7 +40,7 @@ Storage & Media: ImageKit API, Sharp
 
 AI Processing: Cloudflare Workers AI / Image Services
 
-Email Delivery: Resend API
+Contact Forms: Web3Forms API
 
 Icons & UI: Lucide React
 
@@ -76,10 +76,8 @@ Fill in the required values inside .env.local:
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/zoravelle?retryWrites=true&w=majority
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
-# Email Configuration (Resend)
-RESEND_API_KEY=re_123456789...
-RESEND_FROM_EMAIL=Zoravelle <orders@yourverifieddomain.com>
-CONTACT_TO_EMAIL=support@yourdomain.com
+# Contact Form (Web3Forms)
+NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY=your-web3forms-access-key
 
 # Google OAuth Authentication
 GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
@@ -123,13 +121,11 @@ Update the user's role field from "user" to "admin":
 
 Log out and log back in. You now have full administrative access at /admin.
 
-📧 Email Setup (Resend)
+📧 Contact Form Setup (Web3Forms)
 
-Contact & Orders: Messages sent via /contact and new order notifications are routed to CONTACT_TO_EMAIL (or the store contact email configured in Store Settings).
+Create an access key at https://web3forms.com and set NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY in .env.local and your production environment. Web3Forms access keys are intended for browser submissions and are public in the client bundle.
 
-Welcome Emails: Triggered automatically upon initial email password registration or first-time Google OAuth registration.
-
-Server-Side Execution: All email operations execute on the server-side; API keys are never exposed to the client bundle. Email failures are logged safely without halting checkout or registration flows.
+Order notification and account welcome emails are disabled.
 
 🔐 Google Authentication Setup
 

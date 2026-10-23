@@ -34,7 +34,7 @@ export default function FeaturedProducts({ products = [] }) {
   };
 
   return (
-    <section className="container-z bg-offwhite py-10 md:py-14" aria-labelledby="featured-frames-title">
+    <section className="container-z bg-offwhite min-h-[48rem] sm:min-h-[56rem] lg:min-h-[30rem] py-10 md:py-14" aria-labelledby="featured-frames-title">
       <div className="mx-auto max-w-7xl">
         <motion.div
           initial="hidden"

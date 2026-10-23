@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function Loading() {
   return (
-    <main role="status" aria-label="Loading page" aria-busy="true" className="container-z min-h-[55vh] py-10 sm:py-12">
+    <main role="status" aria-label="Loading page" aria-busy="true" className="container-z min-h-[100svh] py-10 sm:py-12">
       <Skeleton className="h-3 w-24" />
       <Skeleton className="mt-4 h-10 w-2/3 sm:w-1/2" />
       <Skeleton className="mt-3 h-4 w-full max-w-lg" />

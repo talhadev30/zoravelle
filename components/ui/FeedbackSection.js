@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { EASING, defaultViewport } from "@/lib/animations";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 function StarDisplay({ value }) {
   const roundedValue = Math.round(Number(value) || 0);
@@ -88,10 +89,8 @@ export default function FeedbackSection() {
     };
   }, []);
 
-  if (loading || (feedback.length === 0 && !error)) return null;
-
   return (
-    <section className="bg-[#f6f3ed] px-5 py-14 sm:px-8 md:py-20 lg:px-12" aria-labelledby="customer-feedback-heading">
+    <section className="min-h-[22rem] bg-[#f6f3ed] px-5 py-14 sm:px-8 md:py-20 lg:px-12" aria-labelledby="customer-feedback-heading">
       <div className="mx-auto w-full max-w-7xl">
         <motion.div
           initial="hidden"
@@ -109,9 +108,27 @@ export default function FeedbackSection() {
           </p>
         </motion.div>
 
-        {error && feedback.length === 0 ? (
+        {loading ? (
+          <div className="grid gap-4 md:grid-cols-3" role="status" aria-label="Loading customer feedback">
+            {Array.from({ length: 3 }, (_, index) => (
+              <div key={index} className="min-h-[11rem] rounded-2xl border border-black/10 bg-white/75 p-5 sm:p-6">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="mt-5 h-4 w-full" />
+                <Skeleton className="mt-2 h-4 w-5/6" />
+                <div className="mt-6 flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : error && feedback.length === 0 ? (
           <p role="status" className="rounded-2xl border border-black/10 bg-white/75 p-5 text-sm text-black/60">
             {error}
+          </p>
+        ) : feedback.length === 0 ? (
+          <p className="flex min-h-[11rem] items-center justify-center rounded-2xl border border-dashed border-black/15 bg-white/40 p-5 text-center text-sm text-black/55">
+            Customer feedback will appear here.
           </p>
         ) : (
           <motion.div

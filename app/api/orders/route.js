@@ -9,7 +9,6 @@ import {
   FREE_SHIPPING_THRESHOLD,
   LENS_OPTIONS,
 } from "@/lib/storefront";
-import { sendOrderAdminEmail } from "@/lib/order-email";
 
 export const runtime = "nodejs";
 
@@ -192,7 +191,6 @@ export async function POST(request) {
     } finally {
       await session.endSession();
     }
-    await sendOrderAdminEmail(order);
     return Response.json({ ok: true, orderNo: order.orderNo }, { status: 201 });
   } catch (error) {
     if (error?.status === 409) return Response.json({ error: error.message }, { status: 409 });

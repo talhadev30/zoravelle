@@ -3,7 +3,6 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { startSession } from "@/lib/auth";
-import { sendWelcomeEmail } from "@/lib/welcome-email";
 import { User } from "@/lib/models";
 import { getGoogleRedirectUri } from "@/lib/googleOAuth";
 export const runtime = "nodejs";
@@ -36,19 +35,16 @@ export async function GET(request) {
     const profile = await profileResponse.json(); if (!profile.sub || !profile.email || profile.email_verified !== true) return failure(request); const avatarUrl = googleAvatar(profile.picture);
     await connectDB(); const email = String(profile.email).trim().toLowerCase();
     let user = await User.findOne({ googleId: profile.sub });
-    let isNewUser = false;
     if (!user) {
       user = await User.findOne({ email });
       if (user?.googleId && user.googleId !== profile.sub) return failure(request);
       if (user) { user.googleId = profile.sub; if (!user.name) user.name = String(profile.name || email).slice(0, 80); if (avatarUrl) user.avatarUrl = avatarUrl; await user.save(); }
       else {
         user = await User.create({ name: String(profile.name || email).slice(0, 80), email, googleId: profile.sub, avatarUrl, role: "customer" });
-        isNewUser = true;
       }
     }
     if (avatarUrl && user.avatarUrl !== avatarUrl) { user.avatarUrl = avatarUrl; await user.save(); }
     await startSession(user);
-    if (isNewUser) await sendWelcomeEmail(user);
     const requestedNext = jar.get(NEXT_COOKIE)?.value || "/account";
     const next = requestedNext.startsWith("/") && !requestedNext.startsWith("//") && !requestedNext.includes("\\") ? requestedNext : "/account";
     const missingContactDetails = !user.phone?.trim() || !user.address?.trim() || !user.city?.trim();

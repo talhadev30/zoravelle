@@ -5,6 +5,8 @@ import { useState } from "react";
 const fieldClass =
   "mt-1 w-full rounded-xl border border-black/15 bg-white px-3 py-3 text-sm outline-none focus:border-black focus:ring-2 focus:ring-black/10";
 
+const web3FormsAccessKey = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY?.trim();
+
 export default function ContactForm() {
   const [sending, setSending] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
@@ -16,15 +18,33 @@ export default function ContactForm() {
     setStatus({ type: "", message: "" });
 
     try {
+      if (!web3FormsAccessKey) {
+        throw new Error("The contact form is not configured yet. Please try again later.");
+      }
+
       const formData = new FormData(form);
-      const response = await fetch("/api/contact", {
+      const topic = String(formData.get("topic") || "").trim();
+      const payload = {
+        access_key: web3FormsAccessKey,
+        name: String(formData.get("name") || "").trim(),
+        email: String(formData.get("email") || "").trim(),
+        subject: "Zoravelle contact: " + topic,
+        topic,
+        message: String(formData.get("message") || "").trim(),
+        botcheck: Boolean(formData.get("botcheck")),
+      };
+      const response = await fetch("https://api.web3forms.com/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(Object.fromEntries(formData.entries())),
+        body: JSON.stringify(payload),
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok || !result.ok) {
-        throw new Error(result.error || "We could not send your message. Please try again.");
+      if (!response.ok || result?.success !== true) {
+        console.error("[contact] Web3Forms submission failed", {
+          status: response.status,
+          message: String(result?.message || "SUBMISSION_FAILED").slice(0, 200),
+        });
+        throw new Error("We could not send your message. Please try again.");
       }
 
       form.reset();
@@ -58,10 +78,7 @@ export default function ContactForm() {
         <textarea name="message" rows={6} maxLength={5000} required className={fieldClass} />
       </label>
       <div className="hidden" aria-hidden="true">
-        <label>
-          Leave this field blank
-          <input name="botcheck" type="text" tabIndex={-1} autoComplete="off" />
-        </label>
+        <input name="botcheck" type="checkbox" tabIndex={-1} />
       </div>
       <div className="flex flex-col items-start gap-3 sm:col-span-2">
         {status.message ? (

@@ -409,3 +409,8 @@ html.dark [class*="ring-black/"] {
   object-position: center;
   padding: clamp(0.45rem, 4%, 1.1rem);
 }
+
+/* Keep skeleton bars visible against dark surfaces. */
+html.dark [class~="skeleton-loading"] {
+  background-color: #292929 !important;
+}

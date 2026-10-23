@@ -1,6 +1,5 @@
 import { connection } from "next/server";
 import HomePage from "@/components/home/HomePage";
-import { getFeaturedProducts } from "@/lib/catalog";
 
 export const metadata = {
   title: "Eyeglasses & Sunglasses for Everyday Wear",
@@ -27,7 +26,5 @@ export const metadata = {
 
 export default async function Home() {
   await connection();
-  const featuredProducts = await getFeaturedProducts();
-
-  return <HomePage featuredProducts={featuredProducts} />;
+  return <HomePage />;
 }

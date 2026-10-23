@@ -93,7 +93,7 @@ export default function ShopClient({
     (active ? "bg-black text-white" : "hover:bg-black/5");
 
   return (
-    <main className="container-z py-10 sm:py-12">
+    <main className="container-z min-h-[120svh] py-10 sm:py-12">
       <nav aria-label="Breadcrumb" className="text-sm text-black/50">
         <Link href="/">Home</Link> / Shop{category ? " / " + category : ""}
       </nav>

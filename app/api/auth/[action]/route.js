@@ -4,7 +4,6 @@ import { connectDB } from "@/lib/db";
 import { getCurrentUser, hashPassword, publicUser, SESSION_COOKIE, startSession, verifyPassword } from "@/lib/auth";
 import { Session, User } from "@/lib/models";
 import { isSameOriginRequest } from "@/lib/security";
-import { sendWelcomeEmail } from "@/lib/welcome-email";
 
 export const runtime = "nodejs";
 
@@ -47,7 +46,6 @@ export async function POST(request, context) {
       if (await User.exists({ email })) return reply({ error: "An account with this email already exists." }, 409);
       const user = await User.create({ name, email, phone, address, city, passwordHash: await hashPassword(password), role: "customer" });
       await startSession(user);
-      await sendWelcomeEmail(user);
       return reply({ user: publicUser(user), ok: true }, 201);
     }
     if (action === "login") {
