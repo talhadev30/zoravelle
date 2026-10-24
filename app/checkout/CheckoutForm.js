@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { useProductsState } from "@/lib/useProducts";
 import {
   useHasHydrated,
@@ -18,9 +17,16 @@ export default function CheckoutForm({ user }) {
   const shippingThreshold = Number(settings.freeShippingThreshold ?? 150);
   const cart = useStoredJson(CART_KEY, [], "zv-cart-updated");
   const hydrated = useHasHydrated();
-  const router = useRouter();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [orderPlaced, setOrderPlaced] = useState("");
+  const orderDialog = useRef(null);
+  useEffect(() => {
+    const dialog = orderDialog.current;
+    if (!dialog) return;
+    dialog.showModal();
+    return () => dialog.close();
+  }, [orderPlaced]);
   const subtotal = cart.reduce(
     (sum, item) => sum + itemUnitPrice(item, products) * item.qty,
     0,
@@ -43,8 +49,7 @@ export default function CheckoutForm({ user }) {
       if (!response.ok)
         throw new Error(result.error || "Could not place your order.");
       writeStoredJson(CART_KEY, [], "zv-cart-updated");
-      router.push("/account?placed=" + encodeURIComponent(result.orderNo));
-      router.refresh();
+      setOrderPlaced(result.orderNo);
     } catch (cause) {
       setError(cause.message);
     } finally {
@@ -52,7 +57,7 @@ export default function CheckoutForm({ user }) {
     }
   }
   if (!hydrated || productsLoading) return <CheckoutSkeleton />;
-  if (!cart.length)
+  if (!cart.length && !orderPlaced)
     return (
       <div className="mt-8 rounded-2xl bg-white/70 p-8 text-center">
         <p>Your bag is empty.</p>
@@ -191,6 +196,72 @@ export default function CheckoutForm({ user }) {
           </div>
         </dl>
       </aside>
+      {orderPlaced && (
+        <dialog
+          ref={orderDialog}
+          onCancel={(event) => {
+            event.preventDefault();
+            setOrderPlaced("");
+          }}
+          className="fixed inset-0 m-0 flex h-dvh w-full max-w-none items-center justify-center border-0 bg-transparent p-4 backdrop:bg-black/65"
+        >
+          <section
+            aria-labelledby="order-confirmation-title"
+            className="w-full max-w-md rounded-2xl border border-black/10 bg-white p-6 text-center shadow-2xl sm:p-8"
+          >
+            <div className="mx-auto grid size-14 place-items-center rounded-full bg-emerald-100 text-emerald-800">
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="none"
+                className="size-7"
+              >
+                <path
+                  d="m5 12 4 4L19 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <h2
+              id="order-confirmation-title"
+              className="mt-4 font-space text-2xl"
+            >
+              Order placed successfully!
+            </h2>
+            <p className="mt-2 text-sm text-black/60">
+              Thank you for your order. We’ll prepare it for delivery.
+            </p>
+            <p className="mt-5 rounded-xl bg-black/[.04] px-4 py-3 text-sm">
+              <span className="block text-black/55">Order number</span>
+              <strong className="mt-1 block break-all">{orderPlaced}</strong>
+            </p>
+            <div className="mt-6 grid gap-3">
+              <Link
+                href={`/account?placed=${encodeURIComponent(orderPlaced)}`}
+                className="grid h-11 place-items-center rounded-full bg-black font-medium text-white"
+              >
+                View order
+              </Link>
+              <Link
+                href="/shop"
+                className="grid h-11 place-items-center rounded-full border border-black/15 font-medium"
+              >
+                Continue shopping
+              </Link>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOrderPlaced("")}
+              className="mt-4 text-sm text-black/55 underline underline-offset-4"
+            >
+              Close
+            </button>
+          </section>
+        </dialog>
+      )}
     </form>
   );
 }
