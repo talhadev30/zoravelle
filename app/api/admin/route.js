@@ -19,8 +19,10 @@ export async function GET() {
       orders: orders.map((order) => ({
         ...order,
         id: order.orderNo,
-        user_action: ["pending", "confirmed", "canceled"].includes(order.user_action)
-          ? order.user_action
+        user_action: ["pending", "confirmed", "canceled"].includes(
+          String(order.user_action || "").toLowerCase(),
+        )
+          ? String(order.user_action).toLowerCase()
           : "pending",
         _id: undefined,
       })),
@@ -41,6 +43,29 @@ export async function PATCH(request) {
       }
       const allowed = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
       if (!allowed.includes(body.status)) return Response.json({ error: "Invalid order status." }, { status: 400 });
+      const currentOrder = await Order.findOne({ orderNo: body.orderNo })
+        .select("status")
+        .lean();
+      if (!currentOrder) {
+        return Response.json({ error: "Order not found." }, { status: 404 });
+      }
+      if (currentOrder.status === body.status) {
+        return Response.json({ ok: true });
+      }
+      if (currentOrder.status !== "Cancelled" && body.status !== "Cancelled") {
+        const result = await Order.updateOne(
+          { orderNo: body.orderNo, status: currentOrder.status },
+          { $set: { status: body.status } },
+          { runValidators: true },
+        );
+        if (!result.matchedCount) {
+          return Response.json(
+            { error: "Order changed while saving. Refresh and try again." },
+            { status: 409 },
+          );
+        }
+        return Response.json({ ok: true });
+      }
       const session = await mongoose.startSession();
       try {
         await session.withTransaction(async () => {
@@ -51,19 +76,9 @@ export async function PATCH(request) {
             throw error;
           }
           if (order.status === body.status) return;
-          const transitions = {
-            Pending: ["Processing", "Shipped", "Cancelled"],
-            Processing: ["Pending", "Shipped", "Cancelled"],
-            Shipped: ["Delivered"],
-            Delivered: [],
-            Cancelled: ["Pending"],
-          };
-          if (!transitions[order.status]?.includes(body.status)) {
-            const error = new Error("This order status change is not allowed.");
-            error.status = 409;
-            throw error;
-          }
-          if (order.status === "Cancelled" && body.status === "Pending") {
+          const wasCancelled = order.status === "Cancelled";
+          const willBeCancelled = body.status === "Cancelled";
+          if (wasCancelled && !willBeCancelled) {
             for (const item of order.items) {
               const result = await Product.updateOne(
                 { id: item.productId, stock: { $gte: item.qty } },
@@ -77,7 +92,7 @@ export async function PATCH(request) {
               }
             }
           }
-          if (body.status === "Cancelled") {
+          if (!wasCancelled && willBeCancelled) {
             for (const item of order.items) {
               await Product.updateOne(
                 { id: item.productId },
@@ -86,8 +101,18 @@ export async function PATCH(request) {
               );
             }
           }
-          order.status = body.status;
-          await order.save({ session });
+          const statusUpdate = await Order.updateOne(
+            { orderNo: order.orderNo, status: order.status },
+            { $set: { status: body.status } },
+            { session, runValidators: true },
+          );
+          if (!statusUpdate.modifiedCount) {
+            const error = new Error(
+              "Order status changed while saving. Refresh and try again.",
+            );
+            error.status = 409;
+            throw error;
+          }
         });
         return Response.json({ ok: true });
       } catch (error) {
@@ -113,5 +138,12 @@ export async function PATCH(request) {
       return Response.json({ ok: true, settings: clean });
     }
     return Response.json({ error: "Unknown admin update." }, { status: 400 });
-  } catch { return Response.json({ error: "Could not save admin changes." }, { status: 503 }); }
+  } catch (error) {
+    console.error("Could not save admin changes:", error);
+    const message =
+      process.env.NODE_ENV === "development" && error instanceof Error
+        ? error.message
+        : "Could not save admin changes.";
+    return Response.json({ error: message }, { status: 503 });
+  }
 }

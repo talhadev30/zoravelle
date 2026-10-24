@@ -14,6 +14,16 @@ const userActionStyles = {
   canceled: "border-red-200 bg-red-100 text-red-900",
 };
 const statuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+function formatOrderDate(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    timeZone: "Asia/Karachi",
+  }).format(date);
+}
 function UserActionBadge({ value }) {
   const action = ["pending", "confirmed", "canceled"].includes(value)
     ? value
@@ -66,6 +76,7 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [updatingOrderNo, setUpdatingOrderNo] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [orderActionFilter, setOrderActionFilter] = useState("all");
@@ -196,15 +207,24 @@ export default function AdminDashboard() {
     if (response.ok) await load();
   }
   async function changeOrder(orderNo, status) {
-    const response = await fetch("/api/admin", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "order", orderNo, status }),
-    });
-    setNotice(
-      response.ok ? "Order status updated." : "Could not update the order.",
-    );
-    if (response.ok) await load();
+    setUpdatingOrderNo(orderNo);
+    try {
+      const response = await fetch("/api/admin", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "order", orderNo, status }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Could not update the order status.");
+      }
+      setNotice("Order status updated.");
+      await load();
+    } catch (error) {
+      setNotice(error.message || "Could not update the order status.");
+    } finally {
+      setUpdatingOrderNo("");
+    }
   }
   async function saveSettings(event) {
     event.preventDefault();
@@ -273,7 +293,10 @@ export default function AdminDashboard() {
         ].map(([id, label]) => (
           <button
             key={id}
-            onClick={() => setTab(id)}
+            onClick={() => {
+              setTab(id);
+              if (id === "orders") load();
+            }}
             className={
               "shrink-0 px-4 py-3 text-sm " +
               (tab === id
@@ -407,18 +430,28 @@ export default function AdminDashboard() {
                     Showing {filteredOrders.length} of {data.orders.length} orders
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={clearOrderFilters}
-                  disabled={
-                    !orderSearch &&
-                    orderStatusFilter === "all" &&
-                    orderActionFilter === "all"
-                  }
-                  className="rounded-full border border-black/15 px-3 py-2 text-sm transition hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Clear filters
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={load}
+                    disabled={loading}
+                    className="rounded-full border border-black/15 px-3 py-2 text-sm transition hover:bg-black/5 disabled:cursor-wait disabled:opacity-50"
+                  >
+                    {loading ? "Refreshing..." : "Refresh orders"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearOrderFilters}
+                    disabled={
+                      !orderSearch &&
+                      orderStatusFilter === "all" &&
+                      orderActionFilter === "all"
+                    }
+                    className="rounded-full border border-black/15 px-3 py-2 text-sm transition hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Clear filters
+                  </button>
+                </div>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <label className="text-xs text-black/60">
@@ -480,6 +513,9 @@ export default function AdminDashboard() {
                     <span className="rounded-full bg-black/5 px-3 py-1 text-xs">
                       {order.paymentMethod}
                     </span>
+                    <span className="rounded-full bg-black/5 px-3 py-1 text-xs">
+                      Date: {formatOrderDate(order.createdAt)}
+                    </span>
                     <span className="text-xs text-black/50">User action</span>
                     <UserActionBadge value={order.user_action} />
                   </div>
@@ -522,6 +558,7 @@ export default function AdminDashboard() {
                     onChange={(event) =>
                       changeOrder(order.orderNo, event.target.value)
                     }
+                    disabled={updatingOrderNo === order.orderNo}
                     className="mt-1 block w-full rounded-lg border bg-white px-3 py-2 text-sm text-black"
                   >
                     {statuses.map((status) => (

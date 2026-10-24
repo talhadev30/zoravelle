@@ -63,6 +63,7 @@ export async function POST(request) {
     const phone = String(body.phone || "").trim();
     const address = String(body.address || "").trim();
     const city = String(body.city || "").trim();
+    const postalCode = String(body.postalCode || "").trim().slice(0, 20);
     if (
       !customerName ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
@@ -149,6 +150,7 @@ export async function POST(request) {
       storeSettings?.freeShippingThreshold ?? FREE_SHIPPING_THRESHOLD,
     );
     const shipping = subtotal >= threshold ? 0 : 10;
+    const total = subtotal - discount + shipping;
     const orderNo = "ZR-" + randomBytes(8).toString("hex").toUpperCase();
     const session = await mongoose.startSession();
     let order;
@@ -175,12 +177,12 @@ export async function POST(request) {
             phone,
             address,
             city,
-            postalCode: String(body.postalCode || "").trim().slice(0, 20),
+            postalCode,
             items,
             subtotal,
             discount,
             shipping,
-            total: subtotal - discount + shipping,
+            total,
             paymentMethod: "Cash on delivery",
             status: "Pending",
             user_action: "pending",
@@ -191,6 +193,42 @@ export async function POST(request) {
       });
     } finally {
       await session.endSession();
+    }
+    const webhookUrl = process.env.N8N_WEBHOOK_URL?.trim();
+    if (webhookUrl) {
+      try {
+        const webhookResponse = await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: "order.created",
+            order: {
+              orderNo: order.orderNo,
+              userId: String(order.userId),
+              customerName: order.customerName,
+              email: order.email,
+              phone: order.phone,
+              address: order.address,
+              city: order.city,
+              postalCode: order.postalCode,
+              items,
+              subtotal,
+              discount,
+              shipping,
+              total,
+              paymentMethod: order.paymentMethod,
+              status: order.status,
+              user_action: order.user_action,
+            },
+          }),
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!webhookResponse.ok) {
+          console.error("n8n order webhook returned HTTP", webhookResponse.status);
+        }
+      } catch {
+        console.error("n8n order webhook delivery failed.");
+      }
     }
     return Response.json({ ok: true, orderNo: order.orderNo }, { status: 201 });
   } catch (error) {
